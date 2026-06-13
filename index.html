@@ -78,6 +78,44 @@
     </div>
   </div>
 
+  <!-- ALLERGIES -->
+  <div class="panel">
+    <div class="panel-head">
+      Patient Allergies
+      <button class="btn btn-outline-secondary btn-sm" onclick="loadAllergies()">↻</button>
+    </div>
+    <div class="panel-body">
+      <div class="row g-2 mb-3">
+        <div class="col-sm-3">
+          <label>Patient ID</label>
+          <input id="al-pid" class="form-control form-control-sm" placeholder="UUID">
+        </div>
+        <div class="col-sm-2">
+          <label>Substance</label>
+          <input id="al-sub" class="form-control form-control-sm" placeholder="e.g. Penicillin">
+        </div>
+        <div class="col-sm-2">
+          <label>SNOMED Code</label>
+          <input id="al-snomed" class="form-control form-control-sm" placeholder="372687004">
+        </div>
+        <div class="col-sm-3">
+          <label>Source</label>
+          <input id="al-src" class="form-control form-control-sm" placeholder="Hospital / Clinic name">
+        </div>
+        <div class="col-sm-2 d-flex align-items-end">
+          <button class="btn btn-main btn-sm w-100" onclick="addAllergy()">Add Allergy</button>
+        </div>
+      </div>
+      <div id="al-msg"></div>
+    </div>
+    <div class="panel-body p-0">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light"><tr><th>Patient ID</th><th>Substance</th><th>SNOMED</th><th>Source</th><th>Recorded</th><th></th></tr></thead>
+        <tbody id="al-list"></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- PRESCRIPTIONS LIST -->
   <div class="panel">
     <div class="panel-head">
@@ -179,7 +217,47 @@ async function send(rx){
   }catch(e){flash('rx-msg','Pharmacy: '+e.message,'danger');}
 }
 
-loadDoctors(); loadRx();
+async function loadAllergies(){
+  const rows = await get('/api/allergies');
+  document.getElementById('al-list').innerHTML = rows.length
+    ? rows.map(a=>`<tr>
+        <td class="mono" title="${a.patientId}">${a.patientId?.slice(0,8)}…</td>
+        <td><strong>${a.substance}</strong></td>
+        <td class="mono text-muted">${a.snomedCode||'—'}</td>
+        <td>${a.source||'—'}</td>
+        <td>${new Date(a.recordedAt).toLocaleDateString()}</td>
+        <td><button class="btn btn-outline-danger btn-sm" onclick="deleteAllergy('${a.id}')">✕</button></td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" class="text-center text-muted py-3">No allergy records</td></tr>';
+}
+
+async function addAllergy(){
+  const pid=document.getElementById('al-pid').value.trim();
+  const sub=document.getElementById('al-sub').value.trim();
+  if(!pid||!sub){flash('al-msg','Patient ID and Substance are required','danger');return;}
+  try{
+    await post('/api/allergies',{
+      patientId:pid,
+      substance:sub,
+      snomedCode:document.getElementById('al-snomed').value.trim()||null,
+      source:document.getElementById('al-src').value.trim()||null,
+    });
+    flash('al-msg',`Allergy <strong>${sub}</strong> added ✓`);
+    document.getElementById('al-sub').value='';
+    document.getElementById('al-snomed').value='';
+    document.getElementById('al-src').value='';
+    loadAllergies();
+  }catch(e){flash('al-msg',e.message,'danger');}
+}
+
+async function deleteAllergy(id){
+  try{
+    await fetch(API+'/api/allergies/'+id,{method:'DELETE'});
+    loadAllergies();
+  }catch(e){flash('al-msg',e.message,'danger');}
+}
+
+loadDoctors(); loadRx(); loadAllergies();
 </script>
 </body>
 </html>
