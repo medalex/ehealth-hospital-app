@@ -143,7 +143,9 @@ const PHARMACY = 'http://localhost:3004';
 const DRUGS    = {103:'Penicillin',105:'Metformin'};
 
 const get  = p => fetch(API+p).then(r=>r.json());
-const post = (p,b,base=API) => fetch(base+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(async r=>{if(!r.ok)throw new Error(await r.text());return r.json();});
+const post = (p,b,base=API) => fetch(base+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(async r=>{if(!r.ok)throw new Error(await errText(r));return r.json();});
+// Extracts a human-readable message from an error response: {error} JSON, plain text, or HTTP status fallback.
+async function errText(r){const t=await r.text();if(!t)return `HTTP ${r.status}`;try{const j=JSON.parse(t);return j.error||j.title||j.message||t;}catch{return t;}}
 const flash = (id,html,t='success') => document.getElementById(id).innerHTML=`<div class="alert alert-${t} p-2 small mb-0">${html}</div>`;
 
 async function loadDoctors(){
@@ -186,13 +188,17 @@ async function loadRx(){
     : '<tr><td colspan="7" class="text-center text-muted py-3">No prescriptions yet</td></tr>';
 }
 
+const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function createRx(){
-  const spin=document.getElementById('rx-spin'); spin.classList.remove('d-none');
   document.getElementById('rx-msg').innerHTML='';
+  const pid=document.getElementById('rx-pid').value.trim();
+  if(!UUID_RE.test(pid)){flash('rx-msg','Patient ID must be a valid UUID (from Patient Portal)','danger');return;}
+  const spin=document.getElementById('rx-spin'); spin.classList.remove('d-none');
   try{
     const rx=await post('/api/prescriptions',{
       doctorId:document.getElementById('rx-doc').value,
-      patientId:document.getElementById('rx-pid').value,
+      patientId:pid,
       drugId:parseInt(document.getElementById('rx-drug').value),
       dosage:document.getElementById('rx-dose').value,
       patientAge:parseInt(document.getElementById('rx-age').value),
