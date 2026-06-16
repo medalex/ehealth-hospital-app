@@ -243,13 +243,18 @@ async function loadAllergies(){
 async function addAllergy(){
   const pid=document.getElementById('al-pid').value.trim();
   const sub=document.getElementById('al-sub').value.trim();
-  if(!pid||!sub){flash('al-msg','Patient ID and Substance are required','danger');return;}
+  const snomed=document.getElementById('al-snomed').value.trim();
+  const src=document.getElementById('al-src').value.trim();
+  if(!UUID_RE.test(pid)){flash('al-msg','Patient ID must be a valid UUID (from Patient Portal)','danger');return;}
+  if(!sub){flash('al-msg','Substance is required','danger');return;}
+  if(!snomed){flash('al-msg','SNOMED Code is required','danger');return;}
+  if(!src){flash('al-msg','Source is required','danger');return;}
   try{
     await post('/api/allergies',{
       patientId:pid,
       substance:sub,
-      snomedCode:document.getElementById('al-snomed').value.trim()||null,
-      source:document.getElementById('al-src').value.trim()||null,
+      snomedCode:snomed,
+      source:src,
     });
     flash('al-msg',`Allergy <strong>${sub}</strong> added ✓`);
     document.getElementById('al-snomed').value='';
