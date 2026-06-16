@@ -92,7 +92,10 @@
         </div>
         <div class="col-sm-2">
           <label>Substance</label>
-          <input id="al-sub" class="form-control form-control-sm" placeholder="e.g. Penicillin">
+          <select id="al-sub" class="form-select form-select-sm">
+            <option value="Penicillin">Penicillin</option>
+            <option value="Metformin">Metformin</option>
+          </select>
         </div>
         <div class="col-sm-2">
           <label>SNOMED Code</label>
@@ -243,7 +246,6 @@ async function addAllergy(){
       source:document.getElementById('al-src').value.trim()||null,
     });
     flash('al-msg',`Allergy <strong>${sub}</strong> added ✓`);
-    document.getElementById('al-sub').value='';
     document.getElementById('al-snomed').value='';
     document.getElementById('al-src').value='';
     loadAllergies();
