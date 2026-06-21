@@ -40,7 +40,7 @@
     </div>
     <div class="panel-body p-0">
       <table class="table table-sm table-hover mb-0">
-        <thead class="table-light"><tr><th>Name</th><th>Specialty</th><th>License</th><th>DKG Credential</th><th></th></tr></thead>
+        <thead class="table-light"><tr><th>Name</th><th>Specialty</th><th>License</th><th>MFSSIA Registry</th></tr></thead>
         <tbody id="doc-list"></tbody>
       </table>
     </div>
@@ -156,23 +156,13 @@ async function loadDoctors(){
   sel.innerHTML = '';
   document.getElementById('doc-list').innerHTML = docs.map(d=>{
     sel.innerHTML += `<option value="${d.id}">${d.firstName} ${d.lastName}</option>`;
-    const cred = d.credentialUal;
     return `<tr>
       <td>${d.firstName} ${d.lastName}</td>
       <td>${d.specialty}</td>
       <td class="mono">${d.licenseNumber}</td>
-      <td>${cred?`<span class="cred-ok" title="${cred}">✓ Registered</span>`:'<span class="cred-no">Not registered</span>'}</td>
-      <td>${cred?'':` <button class="btn btn-warning btn-sm" onclick="registerCred('${d.id}')">Register on DKG</button>`}</td>
+      <td><span class="cred-ok">✓ MFSSIA</span></td>
     </tr>`;
   }).join('');
-}
-
-async function registerCred(id){
-  try{
-    await post(`/api/doctors/${id}/register-credential`,{});
-    flash('rx-msg','Credential registered on DKG ✓');
-    loadDoctors();
-  }catch(e){flash('rx-msg',e.message,'danger');}
 }
 
 async function loadRx(){
