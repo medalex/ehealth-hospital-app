@@ -199,8 +199,20 @@ async function createRx(){
     const ok=rx.outcome===true;
     flash('rx-msg',`Created — ZKP: <strong>${ok?'✓ PASS':'✗ FAIL'}</strong>  stmtHash: <span class="mono">${rx.stmtHash?.slice(0,20)}…</span>${ok?` <button class="btn btn-sm btn-outline-success ms-2" onclick='send(${JSON.stringify(rx)})'>→ Send to Pharmacy</button>`:''}`,ok?'success':'warning');
     loadRx();
-  }catch(e){flash('rx-msg',e.message,'danger');}
+  }catch(e){flash('rx-msg',accessDeniedHtml(e.message),'danger');}
   finally{spin.classList.add('d-none');}
+}
+
+// Renders MFSSIA access-gate denials distinctly (lock + which challenge failed).
+function accessDeniedHtml(msg){
+  const m = msg || 'Request failed';
+  if(/C-DOC-AUTH\b|not in MFSSIA registry/i.test(m))
+    return `🔒 <strong>Access denied — Authentication (C-DOC-AUTH)</strong><br><span class="small">${m}</span>`;
+  if(/C-DOC-AUTHZ\b|consent/i.test(m))
+    return `🔒 <strong>Access denied — Authorization (C-DOC-AUTHZ)</strong><br><span class="small">${m}</span>`;
+  if(/MFSSIA/i.test(m))
+    return `🔒 <strong>Access denied — MFSSIA gate</strong><br><span class="small">${m}</span>`;
+  return m;
 }
 
 async function send(rx){
