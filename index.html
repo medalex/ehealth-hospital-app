@@ -151,33 +151,45 @@ async function errText(r){const t=await r.text();if(!t)return `HTTP ${r.status}`
 const flash = (id,html,t='success') => document.getElementById(id).innerHTML=`<div class="alert alert-${t} p-2 small mb-0">${html}</div>`;
 
 async function loadDoctors(){
-  const docs = await get('/api/doctors');
   const sel  = document.getElementById('rx-doc');
-  sel.innerHTML = '';
-  document.getElementById('doc-list').innerHTML = docs.map(d=>{
-    sel.innerHTML += `<option value="${d.id}">${d.firstName} ${d.lastName}</option>`;
-    return `<tr>
-      <td>${d.firstName} ${d.lastName}</td>
-      <td>${d.specialty}</td>
-      <td class="mono">${d.licenseNumber}</td>
-      <td><span class="cred-ok">✓ MFSSIA</span></td>
-    </tr>`;
-  }).join('');
+  const list = document.getElementById('doc-list');
+  try {
+    const docs = await get('/api/doctors');
+    sel.innerHTML = '';
+    list.innerHTML = docs.map(d=>{
+      sel.innerHTML += `<option value="${d.id}">${d.firstName} ${d.lastName}</option>`;
+      return `<tr>
+        <td>${d.firstName} ${d.lastName}</td>
+        <td>${d.specialty}</td>
+        <td class="mono">${d.licenseNumber}</td>
+        <td><span class="cred-ok">✓ MFSSIA</span></td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-3">Failed to load doctors: ${e.message} <button class="btn btn-sm btn-outline-danger ms-2" onclick="loadDoctors()">Retry</button></td></tr>`;
+    throw e;
+  }
 }
 
 async function loadRx(){
-  const rows = await get('/api/prescriptions');
-  document.getElementById('rx-list').innerHTML = rows.length
-    ? rows.map(r=>`<tr>
-        <td>${new Date(r.createdAt).toLocaleDateString()}</td>
-        <td>${DRUGS[r.drugId]||r.drugId}</td>
-        <td>${r.dosage} mg</td>
-        <td class="mono" title="${r.patientId}">${r.patientId?.slice(0,8)}…</td>
-        <td>${r.outcome===true?'<span class="pass">✓ PASS</span>':r.outcome===false?'<span class="fail">✗ FAIL</span>':'<span class="text-muted">—</span>'}</td>
-        <td class="mono text-muted">${r.stmtHash?r.stmtHash.slice(0,14)+'…':'—'}</td>
-        <td>${r.outcome===true?`<button class="btn btn-outline-success btn-sm" onclick='send(${JSON.stringify(r)})'>→ Pharmacy</button>`:''}</td>
-      </tr>`).join('')
-    : '<tr><td colspan="7" class="text-center text-muted py-3">No prescriptions yet</td></tr>';
+  const list = document.getElementById('rx-list');
+  try {
+    const rows = await get('/api/prescriptions');
+    list.innerHTML = rows.length
+      ? rows.map(r=>`<tr>
+          <td>${new Date(r.createdAt).toLocaleDateString()}</td>
+          <td>${DRUGS[r.drugId]||r.drugId}</td>
+          <td>${r.dosage} mg</td>
+          <td class="mono" title="${r.patientId}">${r.patientId?.slice(0,8)}…</td>
+          <td>${r.outcome===true?'<span class="pass">✓ PASS</span>':r.outcome===false?'<span class="fail">✗ FAIL</span>':'<span class="text-muted">—</span>'}</td>
+          <td class="mono text-muted">${r.stmtHash?r.stmtHash.slice(0,14)+'…':'—'}</td>
+          <td>${r.outcome===true?`<button class="btn btn-outline-success btn-sm" onclick='send(${JSON.stringify(r)})'>→ Pharmacy</button>`:''}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="7" class="text-center text-muted py-3">No prescriptions yet</td></tr>';
+  } catch(e) {
+    list.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-3">Failed to load prescriptions: ${e.message} <button class="btn btn-sm btn-outline-danger ms-2" onclick="loadRx()">Retry</button></td></tr>`;
+    throw e;
+  }
 }
 
 const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -231,17 +243,23 @@ async function send(rx){
 }
 
 async function loadAllergies(){
-  const rows = await get('/api/allergies');
-  document.getElementById('al-list').innerHTML = rows.length
-    ? rows.map(a=>`<tr>
-        <td class="mono" title="${a.patientId}">${a.patientId?.slice(0,8)}…</td>
-        <td><strong>${a.substance}</strong></td>
-        <td class="mono text-muted">${a.snomedCode||'—'}</td>
-        <td>${a.source||'—'}</td>
-        <td>${new Date(a.recordedAt).toLocaleDateString()}</td>
-        <td><button class="btn btn-outline-danger btn-sm" onclick="deleteAllergy('${a.id}')">✕</button></td>
-      </tr>`).join('')
-    : '<tr><td colspan="6" class="text-center text-muted py-3">No allergy records</td></tr>';
+  const list = document.getElementById('al-list');
+  try {
+    const rows = await get('/api/allergies');
+    list.innerHTML = rows.length
+      ? rows.map(a=>`<tr>
+          <td class="mono" title="${a.patientId}">${a.patientId?.slice(0,8)}…</td>
+          <td><strong>${a.substance}</strong></td>
+          <td class="mono text-muted">${a.snomedCode||'—'}</td>
+          <td>${a.source||'—'}</td>
+          <td>${new Date(a.recordedAt).toLocaleDateString()}</td>
+          <td><button class="btn btn-outline-danger btn-sm" onclick="deleteAllergy('${a.id}')">✕</button></td>
+        </tr>`).join('')
+      : '<tr><td colspan="6" class="text-center text-muted py-3">No allergy records</td></tr>';
+  } catch(e) {
+    list.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-3">Failed to load allergies: ${e.message} <button class="btn btn-sm btn-outline-danger ms-2" onclick="loadAllergies()">Retry</button></td></tr>`;
+    throw e;
+  }
 }
 
 async function addAllergy(){
@@ -274,7 +292,12 @@ async function deleteAllergy(id){
   }catch(e){flash('al-msg',e.message,'danger');}
 }
 
-loadDoctors(); loadRx(); loadAllergies();
+// Initial load with retries — survives a startup race where an API
+// is not ready yet when the page first opens (otherwise lists stayed empty).
+function bootstrap(fn, attempts=5, delay=800){
+  (async ()=>{ for(let i=0;i<attempts;i++){ try{ await fn(); return; } catch{ await new Promise(r=>setTimeout(r,delay)); } } })();
+}
+bootstrap(loadDoctors); bootstrap(loadRx); bootstrap(loadAllergies);
 </script>
 </body>
 </html>
