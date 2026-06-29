@@ -209,7 +209,10 @@ async function createRx(){
       workflowId:parseInt(document.getElementById('rx-wf').value),
     });
     const ok=rx.outcome===true;
-    flash('rx-msg',`Created — ZKP: <strong>${ok?'✓ PASS':'✗ FAIL'}</strong>  stmtHash: <span class="mono">${rx.stmtHash?.slice(0,20)}…</span>${ok?` <button class="btn btn-sm btn-outline-success ms-2" onclick='send(${JSON.stringify(rx)})'>→ Send to Pharmacy</button>`:''}`,ok?'success':'warning');
+    const reasons=(!ok && Array.isArray(rx.reasons) && rx.reasons.length)
+      ? `<div class="small mt-1"><strong>Why:</strong><ul class="mb-0">${rx.reasons.map(x=>`<li>${x}</li>`).join('')}</ul></div>`
+      : '';
+    flash('rx-msg',`Created — ZKP: <strong>${ok?'✓ PASS':'✗ FAIL'}</strong>  stmtHash: <span class="mono">${rx.stmtHash?.slice(0,20)}…</span>${ok?` <button class="btn btn-sm btn-outline-success ms-2" onclick='send(${JSON.stringify(rx)})'>→ Send to Pharmacy</button>`:''}${reasons}`,ok?'success':'warning');
     loadRx();
   }catch(e){flash('rx-msg',accessDeniedHtml(e.message),'danger');}
   finally{spin.classList.add('d-none');}
