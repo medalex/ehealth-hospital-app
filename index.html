@@ -100,8 +100,15 @@
           </select>
         </div>
         <div class="col-sm-2">
-          <label>SNOMED Code</label>
-          <input id="al-snomed" class="form-control form-control-sm" placeholder="372687004">
+          <label>Code</label>
+          <input id="al-snomed" class="form-control form-control-sm" placeholder="372687004 / PCN-001">
+        </div>
+        <div class="col-sm-2">
+          <label>Code system</label>
+          <select id="al-sys" class="form-select form-select-sm">
+            <option value="SNOMED-CT" selected>SNOMED-CT</option>
+            <option value="AllergyDB-Local">AllergyDB-Local</option>
+          </select>
         </div>
         <div class="col-sm-3">
           <label>Source</label>
@@ -200,22 +207,42 @@ async function createRx(){
   if(!UUID_RE.test(pid)){flash('rx-msg','Patient ID must be a valid UUID (from Patient Portal)','danger');return;}
   const spin=document.getElementById('rx-spin'); spin.classList.remove('d-none');
   try{
-    const rx=await post('/api/prescriptions',{
+    const r=await fetch(API+'/api/prescriptions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
       doctorId:document.getElementById('rx-doc').value,
       patientId:pid,
       drugId:parseInt(document.getElementById('rx-drug').value),
       dosage:document.getElementById('rx-dose').value,
       patientAge:parseInt(document.getElementById('rx-age').value),
       workflowId:parseInt(document.getElementById('rx-wf').value),
-    });
+    })});
+    const rx=await r.json().catch(()=>({}));
+    // 409 — semantic conflict (numeric / terminology) auto-escalated to the DAO
+    if(r.status===409){ flash('rx-msg',conflictHtml(rx),'warning'); loadRx(); return; }
+    // 403 — MFSSIA access gate (credential / consent)
+    if(r.status===403){ flash('rx-msg',accessDeniedHtml(rx.error||'Access denied'),'danger'); return; }
+    // Any other non-2xx that is not a ZKP rejection (422) is a real error
+    if(!r.ok && r.status!==422) throw new Error(rx.error||rx.title||('HTTP '+r.status));
+    // 201 = issued (accepted) · 422 = rejected by ZKP (recorded for audit, NOT issued)
     const ok=rx.outcome===true;
+    const stmt=rx.stmtHash?`  stmtHash: <span class="mono">${rx.stmtHash.slice(0,20)}…</span>`:'';
     const reasons=(!ok && Array.isArray(rx.reasons) && rx.reasons.length)
       ? `<div class="small mt-1"><strong>Why:</strong><ul class="mb-0">${rx.reasons.map(x=>`<li>${x}</li>`).join('')}</ul></div>`
       : '';
-    flash('rx-msg',`Created — ZKP: <strong>${ok?'✓ PASS':'✗ FAIL'}</strong>  stmtHash: <span class="mono">${rx.stmtHash?.slice(0,20)}…</span>${ok?` <button class="btn btn-sm btn-outline-success ms-2" onclick='send(${JSON.stringify(rx)})'>→ Send to Pharmacy</button>`:''}${reasons}`,ok?'success':'warning');
+    const head=ok?'Issued — ZKP <strong>✓ PASS</strong>':'Rejected — ZKP <strong>✗ FAIL</strong> · not issued, not sent to pharmacy';
+    flash('rx-msg',`${head}${stmt}${ok?` <button class="btn btn-sm btn-outline-success ms-2" onclick='send(${JSON.stringify(rx)})'>→ Send to Pharmacy</button>`:''}${reasons}`,ok?'success':'warning');
     loadRx();
   }catch(e){flash('rx-msg',accessDeniedHtml(e.message),'danger');}
   finally{spin.classList.add('d-none');}
+}
+
+// Renders a semantic-conflict (409) response: the metric/allergy, the DAO proposal opened,
+// and a pointer to the DAO console to resolve it.
+function conflictHtml(b){
+  const what = b.metric ? `metric <strong>${b.metric}</strong>` : (b.substance ? `allergy <strong>${b.substance}</strong>` : 'clinical data');
+  const dao = (b.proposalId!=null)
+    ? ` Auto-escalated to DAO proposal <strong>#${b.proposalId}</strong> — resolve it in the <a href="http://localhost:3010/dao" target="_blank">DAO console</a>, then re-issue.`
+    : '';
+  return `⚠ Semantic conflict on ${what}. ${b.error||''}${dao}`;
 }
 
 // Renders MFSSIA access-gate denials distinctly (lock + which challenge failed).
@@ -269,16 +296,18 @@ async function addAllergy(){
   const pid=document.getElementById('al-pid').value.trim();
   const sub=document.getElementById('al-sub').value.trim();
   const snomed=document.getElementById('al-snomed').value.trim();
+  const sys=document.getElementById('al-sys').value;
   const src=document.getElementById('al-src').value.trim();
   if(!UUID_RE.test(pid)){flash('al-msg','Patient ID must be a valid UUID (from Patient Portal)','danger');return;}
   if(!sub){flash('al-msg','Substance is required','danger');return;}
-  if(!snomed){flash('al-msg','SNOMED Code is required','danger');return;}
+  if(!snomed){flash('al-msg','Code is required','danger');return;}
   if(!src){flash('al-msg','Source is required','danger');return;}
   try{
     await post('/api/allergies',{
       patientId:pid,
       substance:sub,
       snomedCode:snomed,
+      codeSystem:sys,
       source:src,
     });
     flash('al-msg',`Allergy <strong>${sub}</strong> added ✓`);
