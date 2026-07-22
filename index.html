@@ -68,7 +68,6 @@
           </select>
         </div>
         <div class="col-sm-1"><label>Dosage</label><input id="rx-dose" class="form-control form-control-sm" value="8"></div>
-        <div class="col-sm-1"><label>Age</label><input id="rx-age" type="number" class="form-control form-control-sm" value="12"></div>
         <div class="col-sm-2"><label>Workflow ID</label><input id="rx-wf" type="number" class="form-control form-control-sm" value="77"></div>
       </div>
       <div class="mt-2 d-flex align-items-center gap-2">
@@ -212,7 +211,6 @@ async function createRx(){
       patientId:pid,
       drugId:parseInt(document.getElementById('rx-drug').value),
       dosage:document.getElementById('rx-dose').value,
-      patientAge:parseInt(document.getElementById('rx-age').value),
       workflowId:parseInt(document.getElementById('rx-wf').value),
     })});
     const rx=await r.json().catch(()=>({}));
