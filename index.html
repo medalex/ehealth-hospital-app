@@ -266,7 +266,7 @@ async function send(rx){
       publicSignalsJson:rx.publicSignalsJson||'[]',
       outcome:rx.outcome||false,
     }, PHARMACY);
-    flash('rx-msg',`Sent to pharmacy ✓ — ID: <code>${r.id}</code>`);
+    flash('rx-msg',`Sent to pharmacy ✓ — ID: <code>${r.id}</code> <button class="btn btn-sm btn-outline-warning ms-2" onclick='send(${JSON.stringify(rx)})'>→ Send again (replay test)</button>`);
   }catch(e){flash('rx-msg','Pharmacy: '+e.message,'danger');}
 }
 
